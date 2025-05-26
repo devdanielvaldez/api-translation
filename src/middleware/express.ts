@@ -27,14 +27,15 @@ export function createExpressTranslationMiddleware(
 
   // Return middleware function
   return (req: Request, res: Response, next: NextFunction) => {
-    // Store the original send function
+    // Store the original methods
+    const originalJson = res.json;
     const originalSend = res.send;
 
-    // Override the send method - no async here
-    res.send = function(body: any): Response {
+    // Helper function to handle translation
+    async function translateResponse(body: any): Promise<any> {
       // Check if translation should be skipped
       if (skipCondition && skipCondition(req)) {
-        return originalSend.call(res, body);
+        return body;
       }
 
       // Determine target language from query param, header, or default
@@ -44,7 +45,7 @@ export function createExpressTranslationMiddleware(
 
       if (!requestTargetLang) {
         // No target language, proceed without translation
-        return originalSend.call(res, body);
+        return body;
       }
 
       let parsedBody: any;
@@ -56,113 +57,214 @@ export function createExpressTranslationMiddleware(
         } catch (e) {
           // If not valid JSON, treat as plain text
           if (requestTargetLang) {
-            // Handle plain text translation asynchronously
-            translator.translateText(body, requestTargetLang as Language)
-              .then(translatedText => {
-                originalSend.call(res, translatedText);
-              })
-              .catch(error => {
-                console.error('Translation error:', error);
-                originalSend.call(res, body);
-              });
-            return res;
+            try {
+              return await translator.translateText(
+                body, 
+                requestTargetLang as Language
+              );
+            } catch (error) {
+              console.error('Translation error:', error);
+              return body;
+            }
           }
-          return originalSend.call(res, body);
+          return body;
         }
       } else {
         parsedBody = body;
       }
 
-      // If response is an object and has the field to translate
+      // If response is an object and has fields to translate
       if (parsedBody && typeof parsedBody === 'object') {
         const fieldsToTranslate = Array.isArray(fieldToTranslate) 
           ? fieldToTranslate 
           : [fieldToTranslate];
         
-        const translationPromises: Promise<void>[] = [];
-        
+        // Process each field to translate
         for (const field of fieldsToTranslate) {
-          // Handle nested fields
-          const fieldParts = field.split('.');
-          let target = parsedBody;
-          let currentPath = '';
-          
-          // Navigate to the nested field
-          for (let i = 0; i < fieldParts.length - 1; i++) {
-            const part = fieldParts[i];
-            currentPath = currentPath ? `${currentPath}.${part}` : part;
-            
-            if (!target[part] || typeof target[part] !== 'object') {
-              target[part] = {};
-            }
-            target = target[part];
+          try {
+            await processField(
+              parsedBody, 
+              field, 
+              requestTargetLang as Language
+            );
+          } catch (error) {
+            console.error(`Error translating field ${field}:`, error);
           }
-          
-          const finalField = fieldParts[fieldParts.length - 1];
-          
-          // Check if field exists and is a string
-          if (target && target[finalField] && typeof target[finalField] === 'string') {
-            const translationPromise = (async () => {
-              try {
-                let sourceLang: Language | undefined = undefined;
-                
-                // Detect source language if enabled
-                if (detectSourceLanguage) {
-                  sourceLang = await translator.detectLanguage(target[finalField]);
-                }
-                
-                // Perform the translation
-                const translatedText = await translator.translateText(
-                  target[finalField], 
-                  requestTargetLang as Language,
-                  sourceLang
-                );
-                
-                // Store translated text
-                if (preserveOriginal) {
-                  // Create response field path
-                  const responseFieldParts = responseField.split('.');
-                  let responseTarget = parsedBody;
-                  
-                  for (let i = 0; i < responseFieldParts.length - 1; i++) {
-                    const part = responseFieldParts[i];
-                    if (!responseTarget[part]) {
-                      responseTarget[part] = {};
-                    }
-                    responseTarget = responseTarget[part];
-                  }
-                  
-                  const finalResponseField = responseFieldParts[responseFieldParts.length - 1];
-                  responseTarget[finalResponseField] = translatedText;
-                } else {
-                  // Replace original text
-                  target[finalField] = translatedText;
-                }
-              } catch (error) {
-                console.error('Translation error:', error);
-              }
-            })();
-            
-            translationPromises.push(translationPromise);
-          }
-        }
-        
-        // Wait for all translations to complete, then send response
-        if (translationPromises.length > 0) {
-          Promise.all(translationPromises)
-            .then(() => {
-              originalSend.call(res, parsedBody);
-            })
-            .catch(error => {
-              console.error('Translation error:', error);
-              originalSend.call(res, body);
-            });
-          return res;
         }
       }
       
-      // Pass through if no translation was performed
-      return originalSend.call(res, body);
+      return parsedBody;
+    }
+
+    // Helper function to process individual fields, including nested paths
+    async function processField(
+      obj: any, 
+      fieldPath: string, 
+      targetLanguage: Language
+    ): Promise<void> {
+      const fieldParts = fieldPath.split('.');
+      let current = obj;
+      let parent = null;
+      let lastPart = '';
+
+      // Navigate to the target field
+      for (let i = 0; i < fieldParts.length - 1; i++) {
+        const part = fieldParts[i];
+        
+        // Handle array wildcards (e.g., "items.*.title")
+        if (part === '*' && Array.isArray(parent)) {
+          // Process each array item recursively
+          const remainingPath = fieldParts.slice(i + 1).join('.');
+          for (const item of current) {
+            await processField(item, remainingPath, targetLanguage);
+          }
+          return;
+        }
+        
+        if (!current[part]) return;
+        
+        parent = current;
+        lastPart = part;
+        current = current[part];
+      }
+
+      const finalField = fieldParts[fieldParts.length - 1];
+      
+      // Handle wildcards at the final position
+      if (finalField === '*' && Array.isArray(current)) {
+        // Translate all items in the array
+        for (let i = 0; i < current.length; i++) {
+          if (typeof current[i] === 'string') {
+            try {
+              let sourceLang: Language | undefined = undefined;
+              
+              if (detectSourceLanguage) {
+                sourceLang = await translator.detectLanguage(current[i]);
+              }
+              
+              const translatedText = await translator.translateText(
+                current[i], 
+                targetLanguage,
+                sourceLang
+              );
+              
+              if (preserveOriginal) {
+                // Create or use existing response field structure
+                if (!obj[responseField]) {
+                  obj[responseField] = Array.isArray(current) ? [] : {};
+                }
+                if (!obj[responseField][i]) {
+                  obj[responseField][i] = translatedText;
+                } else if (typeof obj[responseField][i] === 'object') {
+                  obj[responseField][i]['_translated'] = translatedText;
+                }
+              } else {
+                current[i] = translatedText;
+              }
+            } catch (error) {
+              console.error('Translation error in array item:', error);
+            }
+          } else if (typeof current[i] === 'object' && current[i] !== null) {
+            // If array contains objects, create a placeholder for translated values
+            if (preserveOriginal && !obj[responseField]) {
+              obj[responseField] = [];
+            }
+            if (preserveOriginal && !obj[responseField][i]) {
+              obj[responseField][i] = {};
+            }
+          }
+        }
+        return;
+      }
+      
+      // Process regular field if it's a string
+      if (current && typeof current[finalField] === 'string') {
+        try {
+          let sourceLang: Language | undefined = undefined;
+          
+          if (detectSourceLanguage) {
+            sourceLang = await translator.detectLanguage(current[finalField]);
+          }
+          
+          const translatedText = await translator.translateText(
+            current[finalField], 
+            targetLanguage,
+            sourceLang
+          );
+          
+          if (preserveOriginal) {
+            // Handle response field structure for storing translations
+            const responseParts = responseField.split('.');
+            let responseObj = obj;
+            
+            // Create nested structure if it doesn't exist
+            for (let i = 0; i < responseParts.length - 1; i++) {
+              const part = responseParts[i];
+              if (!responseObj[part]) {
+                responseObj[part] = {};
+              }
+              responseObj = responseObj[part];
+            }
+            
+            const finalResponseField = responseParts[responseParts.length - 1];
+            responseObj[finalResponseField] = translatedText;
+          } else {
+            // Replace original text
+            current[finalField] = translatedText;
+          }
+        } catch (error) {
+          console.error(`Translation error for field ${fieldPath}:`, error);
+        }
+      }
+    }
+
+    // Override res.json
+    res.json = function(body: any): Response {
+      // Handle async translation and then call the original method
+      translateResponse(body)
+        .then(translatedBody => {
+          originalJson.call(res, translatedBody);
+        })
+        .catch(error => {
+          console.error('Error in translation middleware:', error);
+          originalJson.call(res, body);
+        });
+      
+      return res;
+    };
+
+    // Override res.send
+    res.send = function(body: any): Response {
+      // Handle async translation and then call the original method
+      translateResponse(body)
+        .then(translatedBody => {
+          originalSend.call(res, translatedBody);
+        })
+        .catch(error => {
+          console.error('Error in translation middleware:', error);
+          originalSend.call(res, body);
+        });
+      
+      return res;
+    };
+    
+    // Add a helper method to res for direct translation
+    (res as any).translate = async function(text: string): Promise<string> {
+      const requestTargetLang = (req.query[langQueryParam] as string) || 
+                              req.headers[langHeaderName] || 
+                              targetLang;
+                              
+      if (!requestTargetLang) return text;
+      
+      try {
+        return await translator.translateText(
+          text, 
+          requestTargetLang as Language
+        );
+      } catch (error) {
+        console.error('Direct translation error:', error);
+        return text;
+      }
     };
     
     next();
