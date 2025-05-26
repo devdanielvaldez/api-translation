@@ -15,16 +15,18 @@ export class GeminiClient {
   /**
    * Create a new Gemini API client for translations
    * 
+   * @param apiKey - Google API key
    * @param modelName - Gemini model name
    * @param enableCache - Whether to cache translation results
    * @param cacheSize - Maximum number of entries in the translation cache
    */
   constructor(
+    apiKey: string, 
     modelName?: string,
     enableCache = true,
     cacheSize = 1000
   ) {
-    this.genAI = new GoogleGenerativeAI("AIzaSyDrNY_hexwjMFYQFcUfdm7D8tq7suET7zM");
+    this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = this.genAI.getGenerativeModel({ model: modelName || this.DEFAULT_MODEL });
     this.enableCache = enableCache;
     this.cacheSize = cacheSize;

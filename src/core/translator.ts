@@ -15,6 +15,9 @@ export class Translator {
    * @param config - Configuration for the translator
    */
   constructor(config: TranslatorConfig) {
+    if (!config.apiKey) {
+      throw new Error('API key is required for the translator');
+    }
 
     this.config = {
       defaultTargetLanguage: Language.EN,
@@ -26,6 +29,7 @@ export class Translator {
     };
 
     this.client = new GeminiClient(
+      this.config.apiKey, 
       this.config.model, 
       this.config.enableCache,
       this.config.cacheSize
