@@ -1,0 +1,59 @@
+{
+  "name": "apitranslator",
+  "version": "0.0.1",
+  "description": "Middleware library for automatic translation of API responses using Google Gemini. Seamlessly translates content across multiple languages with support for Express, Koa, Fastify, and vanilla JavaScript/TypeScript applications.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "translation",
+    "i18n",
+    "internationalization",
+    "gemini",
+    "google-ai",
+    "middleware",
+    "api",
+    "express",
+    "koa",
+    "fastify",
+    "typescript"
+  ],
+  "author": "Daniel Valdez | FullStack Developer",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.15.11",
+    "eslint": "^8.38.0",
+    "express": "^4.18.2",
+    "fastify": "^4.15.0",
+    "jest": "^29.5.0",
+    "koa": "^2.14.1",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.4"
+  },
+  "peerDependencies": {
+    "express": ">=4.0.0",
+    "fastify": ">=4.0.0",
+    "koa": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    },
+    "koa": {
+      "optional": true
+    }
+  }
+}
