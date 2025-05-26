@@ -27,6 +27,11 @@ import { createExpressTranslationMiddleware } from 'apitranslator';
 
 const app = express();
 
+// Config translator
+const translator = new Translator({
+  cacheSize: 1000
+});
+
 // Apply translation middleware
 app.use(createExpressTranslationMiddleware(translator, {
   targetLang: 'es',             // Default target language
