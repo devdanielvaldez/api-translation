@@ -58,6 +58,12 @@ export function createExpressTranslationMiddleware(
         return body;
       }
 
+      // Check if the response has already been translated
+      if (res.locals.translated) {
+        console.log(`[${requestId}] Response has already been translated, returning original body`);
+        return body;
+      }
+
       let parsedBody: any;
       
       // Parse response body if it's a JSON string
@@ -116,6 +122,7 @@ export function createExpressTranslationMiddleware(
       }
       
       console.log(`[${requestId}] Translation process complete, returning processed body`);
+      res.locals.translated = true; // Mark as translated
       return parsedBody;
     }
 
