@@ -66,6 +66,10 @@ export class GeminiClient {
       const response = result.response;
       const translatedText = response.text().trim();
 
+      console.log(result);
+      console.log(response);
+      console.log(translatedText);
+
       // Cache the result if caching is enabled
       if (this.enableCache) {
         // If cache is at capacity, remove the oldest entry
