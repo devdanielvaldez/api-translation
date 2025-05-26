@@ -7,7 +7,6 @@ import { Language } from '../types/languages';
 export class GeminiClient {
   private genAI: GoogleGenerativeAI;
   private model: GenerativeModel;
-  private readonly DEFAULT_MODEL = 'gemini-1.5-pro';
   private cache: Map<string, string> = new Map();
   private enableCache: boolean;
   private cacheSize: number;
@@ -15,19 +14,15 @@ export class GeminiClient {
   /**
    * Create a new Gemini API client for translations
    * 
-   * @param apiKey - Google API key
-   * @param modelName - Gemini model name
    * @param enableCache - Whether to cache translation results
    * @param cacheSize - Maximum number of entries in the translation cache
    */
   constructor(
-    apiKey: string, 
-    modelName?: string,
     enableCache = true,
     cacheSize = 1000
   ) {
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: modelName || this.DEFAULT_MODEL });
+    this.genAI = new GoogleGenerativeAI("AIzaSyCwdyFjixv7v_CoXKneXxvnICy-MDCFGcw");
+    this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     this.enableCache = enableCache;
     this.cacheSize = cacheSize;
   }

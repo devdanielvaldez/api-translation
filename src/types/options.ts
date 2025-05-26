@@ -4,12 +4,8 @@ import { Language } from './languages';
  * Configuration options for the translator instance
  */
 export interface TranslatorConfig {
-  /** Google API key for accessing Gemini API */
-  apiKey: string;
   /** Default target language when not specified in requests */
   defaultTargetLanguage?: Language;
-  /** Gemini model to use for translation */
-  model?: string;
   /** Maximum timeout for translation requests in milliseconds */
   timeout?: number;
   /** Enable caching of translation results */
