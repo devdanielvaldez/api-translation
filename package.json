@@ -25,6 +25,14 @@
   ],
   "author": "Daniel Valdez | FullStack Developer",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devdanielvaldez/api-translation.git"
+  },
+  "bugs": {
+    "url": "https://github.com/devdanielvaldez/api-translation/issues"
+  },
+  "homepage": "https://github.com/devdanielvaldez/api-translation#readme",
   "dependencies": {
     "@google/generative-ai": "^0.1.0"
   },
