@@ -1,6 +1,6 @@
 {
   "name": "api-translator-util",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Middleware library for automatic translation of API responses using Google Gemini. Seamlessly translates content across multiple languages with support for Express, Koa, Fastify, and vanilla JavaScript/TypeScript applications.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
