@@ -14,7 +14,7 @@ A lightweight and flexible library to integrate automatic translation into your 
 ## Installation
 
 ```bash
-npm install apitranslator
+npm i api-translator-util
 ```
 
 ## Express Middleware
@@ -23,7 +23,7 @@ Add translation capabilities to your Express.js application:
 
 ```javascript
 import express from 'express';
-import { createExpressTranslationMiddleware } from 'apitranslator';
+import { createExpressTranslationMiddleware } from 'api-translator-util';
 
 const app = express();
 
